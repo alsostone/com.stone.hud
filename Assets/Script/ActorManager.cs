@@ -19,18 +19,20 @@ namespace YX
         {
             Instance = this;
         }
+        
         private void Start()
         {
             AllActors.Capacity = Count;
             for (int i = 0; i < Count; i++)
             {
                 Actor actor = new Actor();
-                actor.Matrix = Matrix4x4.TRS(new Vector3(Random.Range(-10f, 10f), Random.Range(-10f, 10f), 0), Quaternion.identity, Vector3.one);
+                actor.Matrix = Matrix4x4.TRS(new Vector3(Random.Range(-100f, 100f), 0, Random.Range(-100f, 100f)), Quaternion.identity, Vector3.one);
                 actor.NameIndex = i;
                 actor.Progress = Random.Range(0.0f, 1.0f);
                 AllActors.Add(actor);
             }
         }
+        
         private void Update()
         {
             foreach (var actor in AllActors) 
@@ -39,6 +41,7 @@ namespace YX
             }
         }
     }
+    
     public class Actor
 	{
 		public Matrix4x4 Matrix;
@@ -47,7 +50,7 @@ namespace YX
 
         public void Update()
         {
-            Matrix = Matrix4x4.TRS(new Vector3(Random.Range(-10f, 10f), Random.Range(-10f, 10f), 0), Quaternion.identity, Vector3.one);
+            //Matrix = Matrix4x4.TRS(new Vector3(Random.Range(-100f, 100f), Random.Range(-100f, 100f), Random.Range(-100f, 100f)), Quaternion.identity, Vector3.one);
             Progress = Random.Range(0.0f, 1.0f);
         }
     }

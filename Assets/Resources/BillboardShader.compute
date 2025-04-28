@@ -1,0 +1,45 @@
+
+#pragma kernel CSMain
+
+struct InstanceData
+{
+    matrix trs;
+    float4 color;
+};
+
+StructuredBuffer<InstanceData> _instanceBuffer;
+AppendStructuredBuffer<uint> _visibleBuffer;
+
+float _Time;
+matrix _VPMatrix;
+
+
+// 判断点是否在视锥体内
+bool InFrustum(float4 clipPos)
+{
+    float3 absPos = abs(clipPos.xyz);
+    return absPos.x < clipPos.w && absPos.y < clipPos.w && absPos.z < clipPos.w;
+}
+
+[numthreads(64,1,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    InstanceData instance = _instanceBuffer[id.x];
+
+    // 视锥体裁剪
+    float4 posWS = float4(instance.trs._m03_m13_m23, 1.0);
+    float4 clipPos = mul(_VPMatrix, posWS);
+    if(!InFrustum(clipPos))
+        return;
+    
+    _visibleBuffer.Append(id.x);
+
+    //
+    // float y = instance.position.y + sin(_Time + id.x) * 5;
+    //
+    // // 可见性条件（例如Y坐标在[-5,5]之间）
+    // if(y > -5 && y < 5)
+    // {
+    //     _visibleBuffer.Append(id.x);
+    // }
+}
