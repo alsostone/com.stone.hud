@@ -1,12 +1,7 @@
-
-//=======================================================
-// 作者：hannibal
-// 描述：hud instance
-//=======================================================
-using System.Collections.Generic;
 using UnityEngine;
+using YX;
 
-namespace YX
+namespace ST.HUD
 {
     /// <summary>
     /// 使用Instanced批量渲染对象
@@ -26,10 +21,11 @@ namespace YX
         public GameObject Quad;
         
         public int instanceCount = 500;     // 总实例数量
-        public float spawnRadius = 50f;      // 实例生成范围
-        public ComputeShader computeShader;  // 筛选可见实例的ComputeShader
         
-        // 实例数据结构体（需与Shader内存布局匹配）
+        public ComputeShader frustumCulling;
+        private int _kernel;
+        private uint[] _args = new uint[5] { 0, 0, 0, 0, 0 };
+
         private struct InstanceData
         {
             public Vector3 position;
@@ -39,10 +35,6 @@ namespace YX
         private ComputeBuffer _instanceBuffer;    // 存储所有实例数据
         private ComputeBuffer _visibleBuffer;     // 存储可见实例索引
         private ComputeBuffer _indirectArgsBuffer;// 间接绘制参数
-
-        private int _kernel;                      // ComputeShader内核ID
-        private uint[] _args = new uint[5] { 0, 0, 0, 0, 0 };
-        
 
         private void Start()
         {
@@ -89,9 +81,9 @@ namespace YX
             _indirectArgsBuffer.SetData(_args);
             
             // 绑定ComputeShader参数
-            _kernel = computeShader.FindKernel("CSMain");
-            computeShader.SetBuffer(_kernel, "_instanceBuffer", _instanceBuffer);
-            computeShader.SetBuffer(_kernel, "_visibleBuffer", _visibleBuffer);
+            _kernel = frustumCulling.FindKernel("FrustumCulling");
+            frustumCulling.SetBuffer(_kernel, "_instanceBuffer", _instanceBuffer);
+            frustumCulling.SetBuffer(_kernel, "_visibleBuffer", _visibleBuffer);
         }
         void BuildMatrixAndBlock()
         {
@@ -113,22 +105,15 @@ namespace YX
         }
         void Update()
         {
-            // 每帧重置可见缓冲区并调度ComputeShader
-            _visibleBuffer.SetCounterValue(0);  // 重置Append Buffer的计数器
-        
-            // 传递视锥体参数
-            Matrix4x4 viewMatrix = Camera.main.worldToCameraMatrix;
-            Matrix4x4 projMatrix = GL.GetGPUProjectionMatrix(Camera.main.projectionMatrix, false);
-            Matrix4x4 vpMatrix = projMatrix * viewMatrix;
+            _visibleBuffer.SetCounterValue(0);
             
-            computeShader.SetMatrix("_VPMatrix", vpMatrix);
+            var viewMatrix = Camera.main.worldToCameraMatrix;
+            var projMatrix = GL.GetGPUProjectionMatrix(Camera.main.projectionMatrix, false);
+            var vpMatrix = projMatrix * viewMatrix;
+            frustumCulling.SetMatrix("_VPMatrix", vpMatrix);
             
-            // 传递参数到ComputeShader（例如摄像机位置、视锥体等）
-            computeShader.SetFloat("_Time", Time.time);
-        
-            // 调度ComputeShader线程组（每个线程处理一个实例）
-            int threadGroups = Mathf.CeilToInt(instanceCount / 64f);
-            computeShader.Dispatch(_kernel, threadGroups, 1, 1);
+            var threadGroups = Mathf.CeilToInt(instanceCount / 64f);
+            frustumCulling.Dispatch(_kernel, threadGroups, 1, 1);
 
             // 将可见实例数量复制到间接参数缓冲区
             ComputeBuffer.CopyCount(_visibleBuffer, _indirectArgsBuffer, sizeof(uint));
