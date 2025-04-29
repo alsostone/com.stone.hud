@@ -11,7 +11,6 @@ namespace YX
     /// <summary>
     /// 使用Instanced批量渲染对象
     /// </summary>
-    [RequireComponent(typeof(HUDMeshBuild))]
     public class HUDInstanced : MonoBehaviour
     {
         [SerializeField]
@@ -19,7 +18,6 @@ namespace YX
         [SerializeField]
         private FontRender2Texture _font2Texture;
         
-        private HUDMeshBuild _meshBuild;
         private Mesh _instanceMesh;
 
         private Matrix4x4[] _matrices;
@@ -45,17 +43,13 @@ namespace YX
         private int _kernel;                      // ComputeShader内核ID
         private uint[] _args = new uint[5] { 0, 0, 0, 0, 0 };
         
-        private void Awake()
-        {
-            _meshBuild = GetComponent<HUDMeshBuild>();
-        }
 
         private void Start()
         {
             System.Diagnostics.Stopwatch stopwatch = new System.Diagnostics.Stopwatch();
             stopwatch.Start();
             {
-                _instanceMesh = _meshBuild.BuildMesh();
+                _instanceMesh = HudTemplate.GenerateMesh();
                 for (int i = 0; i < 500; ++i)
                 {
                     _font2Texture.Draw("Test:" + i);
@@ -65,7 +59,6 @@ namespace YX
             Debug.LogFormat("初始化字体耗时:{0}ms", stopwatch.ElapsedMilliseconds);
 
             _instanceMat.SetTexture("_FontTex", _font2Texture.TextureArray);
-            _instanceMat.SetVector("_PivotPoint", new Vector3(3.5f * 0.5f, 0.4f, 0));
             
             BuildMatrixAndBlock();
             
@@ -75,8 +68,9 @@ namespace YX
             {
                 instances[i].position = new Vector3(Random.Range(-100f, 100f), 0, Random.Range(-100f, 100f));
                 instances[i].color = Random.ColorHSV();
+                
                 var cube = Instantiate(Cube);
-                cube.transform.position = instances[i].position + Vector3.down * 0.5f;
+                cube.transform.position = instances[i].position;
                 
                 var quad = Instantiate(Quad);
                 quad.transform.position = instances[i].position;
@@ -119,9 +113,6 @@ namespace YX
         }
         void Update()
         {
-            //Graphics.DrawMeshInstanced(_instanceMesh, 0, _instanceMat, _matrices, 500, _block, UnityEngine.Rendering.ShadowCastingMode.Off, false);
-            
-            
             // 每帧重置可见缓冲区并调度ComputeShader
             _visibleBuffer.SetCounterValue(0);  // 重置Append Buffer的计数器
         

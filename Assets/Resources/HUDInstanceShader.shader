@@ -17,7 +17,7 @@
 			CGPROGRAM
 			#pragma vertex vert
 			#pragma fragment frag
-			#pragma require 2darray				//需要2d array
+			#pragma require 2darray
 			
 			#include "UnityCG.cginc"
             #pragma multi_compile_instancing
@@ -53,8 +53,6 @@
 			UNITY_DECLARE_TEX2DARRAY(_FontTex);
 			float4 _FontTex_ST;
 			float4 _Parms[511];
-
-			float3 _PivotPoint;
 			float3 _TargetDirection;
 
 			#ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
@@ -64,36 +62,31 @@
 			    float3 pos = _instanceBuffer[id].position;
             	float4x4 mat = unity_ObjectToWorld;
             	mat[0][3] = pos.x;
-				mat[1][3] = pos.y - _PivotPoint.y;
+				mat[1][3] = pos.y;
 				mat[2][3] = pos.z;
 				unity_ObjectToWorld = mat;
             }
             #endif
-
-			// 构造旋转矩阵（从目标方向到当前方向）
-            float3x3 BuildRotationMatrix(float3 targetDir)
+			
+            float3x3 RotationMatrix(float3 targetDir)
 			{
-                // 获取当前物体的前方向（模型空间Z轴）
                 float3 modelForward = normalize(mul(unity_ObjectToWorld, float4(0,0,1,0)).xyz);
-                
-                // 计算旋转轴（当前前方向 -> 目标方向）
                 float3 rotateAxis = cross(modelForward, targetDir);
                 float rotateAngle = acos(dot(modelForward, targetDir));
                 
-                // 构造旋转矩阵（绕轴旋转）
                 float3x3 rotationMatrix;
                 float c = cos(rotateAngle);
                 float s = sin(rotateAngle);
                 float t = 1 - c;
                 rotationMatrix[0] = float3(t * rotateAxis.x * rotateAxis.x + c, 
-                                         t * rotateAxis.x * rotateAxis.y - s * rotateAxis.z, 
-                                         t * rotateAxis.x * rotateAxis.z + s * rotateAxis.y);
+                                           t * rotateAxis.x * rotateAxis.y - s * rotateAxis.z, 
+                                           t * rotateAxis.x * rotateAxis.z + s * rotateAxis.y);
                 rotationMatrix[1] = float3(t * rotateAxis.x * rotateAxis.y + s * rotateAxis.z, 
-                                         t * rotateAxis.y * rotateAxis.y + c, 
-                                         t * rotateAxis.y * rotateAxis.z - s * rotateAxis.x);
+                                           t * rotateAxis.y * rotateAxis.y + c, 
+                                           t * rotateAxis.y * rotateAxis.z - s * rotateAxis.x);
                 rotationMatrix[2] = float3(t * rotateAxis.x * rotateAxis.z - s * rotateAxis.y, 
-                                         t * rotateAxis.y * rotateAxis.z + s * rotateAxis.x, 
-                                         t * rotateAxis.z * rotateAxis.z + c);
+                                           t * rotateAxis.y * rotateAxis.z + s * rotateAxis.x, 
+                                           t * rotateAxis.z * rotateAxis.z + c);
                 return rotationMatrix;
             }
 			
@@ -109,19 +102,11 @@
 			    o.color = data.color;
 			    #endif
             	
-				// // 将基准点转换到世界空间
-    //             float3 worldPivot = mul(unity_ObjectToWorld, float4(_PivotPoint, 1)).xyz;
-    //             
-    //             // 构造旋转矩阵
-    //             float3x3 rotMat = BuildRotationMatrix(normalize(_TargetDirection));
-    //             
-    //             // 计算顶点相对基准点的偏移
-    //             float3 worldOffset = mul(unity_ObjectToWorld, v.vertex).xyz - worldPivot;
-    //             
-    //             // 应用旋转并转换到裁剪空间
-    //             float3 rotatedPos = worldPivot + mul(rotMat, worldOffset);
-    //             o.vertex = mul(UNITY_MATRIX_VP, float4(rotatedPos, 1.0));
-            	o.vertex = UnityObjectToClipPos(v.vertex);
+                float3 worldPivot = mul(unity_ObjectToWorld, float4(0, 0, 0, 1)).xyz;
+                float3x3 rotMat = RotationMatrix(normalize(_TargetDirection));
+                float3 worldOffset = mul(unity_ObjectToWorld, v.vertex).xyz - worldPivot;
+                float3 rotatedPos = worldPivot + mul(rotMat, worldOffset);
+                o.vertex = mul(UNITY_MATRIX_VP, float4(rotatedPos, 1.0));
 			    return o;
 			}
 
