@@ -1,4 +1,4 @@
-Shader "HUD/Instance"
+	Shader "HUD/Instance"
 {
 	Properties
 	{
@@ -17,10 +17,11 @@ Shader "HUD/Instance"
 			CGPROGRAM
 			#pragma vertex vert
 			#pragma fragment frag
-            #pragma target 4.5
 			#pragma require 2darray				//需要2d array
 			
 			#include "UnityCG.cginc"
+            #pragma multi_compile_instancing
+            #pragma instancing_options procedural:setup
 			
 			struct appdata
 			{
@@ -42,70 +43,85 @@ Shader "HUD/Instance"
 
 			struct InstanceData
 			{
-			    matrix trs;
+			    float3 position;
 			    float4 color;
 			};
 			
-			#if SHADER_TARGET >= 45
 			StructuredBuffer<InstanceData> _instanceBuffer;
 			StructuredBuffer<uint> _visibleBuffer;
-            #endif
 
 			UNITY_DECLARE_TEX2DARRAY(_FontTex);
 			float4 _FontTex_ST;
 			float4 _Parms[511];
-			float3 _CameraPosition;
 
+			float3 _PivotPoint;
+			float3 _TargetDirection;
 
-			v2f vert(appdata v, uint instanceID : SV_InstanceID)
+			#ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
+            void setup()
+            {
+            	uint id = _visibleBuffer[unity_InstanceID];
+			    float3 pos = _instanceBuffer[id].position;
+            	float4x4 mat = unity_ObjectToWorld;
+            	mat[0][3] = pos.x;
+				mat[1][3] = pos.y - _PivotPoint.y;
+				mat[2][3] = pos.z;
+				unity_ObjectToWorld = mat;
+            }
+            #endif
+
+			// 构造旋转矩阵（从目标方向到当前方向）
+            float3x3 BuildRotationMatrix(float3 targetDir)
 			{
-			    uint id = _visibleBuffer[instanceID];
+                // 获取当前物体的前方向（模型空间Z轴）
+                float3 modelForward = normalize(mul(unity_ObjectToWorld, float4(0,0,1,0)).xyz);
+                
+                // 计算旋转轴（当前前方向 -> 目标方向）
+                float3 rotateAxis = cross(modelForward, targetDir);
+                float rotateAngle = acos(dot(modelForward, targetDir));
+                
+                // 构造旋转矩阵（绕轴旋转）
+                float3x3 rotationMatrix;
+                float c = cos(rotateAngle);
+                float s = sin(rotateAngle);
+                float t = 1 - c;
+                rotationMatrix[0] = float3(t * rotateAxis.x * rotateAxis.x + c, 
+                                         t * rotateAxis.x * rotateAxis.y - s * rotateAxis.z, 
+                                         t * rotateAxis.x * rotateAxis.z + s * rotateAxis.y);
+                rotationMatrix[1] = float3(t * rotateAxis.x * rotateAxis.y + s * rotateAxis.z, 
+                                         t * rotateAxis.y * rotateAxis.y + c, 
+                                         t * rotateAxis.y * rotateAxis.z - s * rotateAxis.x);
+                rotationMatrix[2] = float3(t * rotateAxis.x * rotateAxis.z - s * rotateAxis.y, 
+                                         t * rotateAxis.y * rotateAxis.z + s * rotateAxis.x, 
+                                         t * rotateAxis.z * rotateAxis.z + c);
+                return rotationMatrix;
+            }
+			
+			v2f vert(appdata v)
+			{
+			    v2f o;
+            	UNITY_SETUP_INSTANCE_ID(v);
+                UNITY_TRANSFER_INSTANCE_ID(v, o);
+
+			    #ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
+			    uint id = _visibleBuffer[unity_InstanceID];
 			    InstanceData data = _instanceBuffer[id];
-				
-				// // 顶点着色器中计算
-				// float3 center = data.trs._m03_m13_m23; // 获取物体中心世界坐标
-				// float3 viewDir = normalize(center - _WorldSpaceCameraPos); // 摄像机方向
-    //
-				// float3 right = normalize(cross(float3(0,0,1), viewDir));
-				// float3 up = normalize(cross(viewDir, right));
-    //
-				// float3 localPos = v.vertex.xyz;
-				// float3 worldPos = center + right * localPos.x + up * localPos.y;
-				// 				
-				// // // 应用旋转
-			 // //    float3 pos = mul(data.rotation, v.vertex.xyz);
-			 // //    pos += data.position;
-    // //
-				// //     // 视图变换
-				// // o.pos = mul(UNITY_MATRIX_VP, float4(pos, 1.0));
-				// //
-    //
-			 //    v2f o;
-			 //    o.vertex = UnityObjectToClipPos(worldPos);
-
-
-
-				float3 center = float3(0, 0, 0);
-					//物体空间原点
-			     //将相机位置转换至物体空间并计算相对原点朝向，物体旋转后的法向将与之平行，这里实现的是Viewpoint-oriented Billboard
-			     float3 viewer = mul(data.trs,float4(_WorldSpaceCameraPos, 1));
-			     float3 normalDir = viewer - center;
-			     // _VerticalBillboarding为0到1，控制物体法线朝向向上的限制，实现Axial Billboard到World-Oriented Billboard的变换
-			     normalDir.y =normalDir.y * 0.5;
-			     normalDir = normalize(normalDir);
-			     //若原物体法线已经朝向上，这up为z轴正方向，否者默认为y轴正方向
-			     float3 upDir = abs(normalDir.y) > 0.999 ? float3(0, 0, 1) : float3(0, 1, 0);
-			     //利用初步的upDir计算righDir，并以此重建准确的upDir，达到新建转向后坐标系的目的
-			     float3 rightDir = normalize(cross(upDir, normalDir));     upDir = normalize(cross(normalDir, rightDir));
-			     // 计算原物体各顶点相对位移，并加到新的坐标系上
-			     float3 centerOffs = v.vertex.xyz - center;
-			     float3 localPos = center + rightDir * centerOffs.x + upDir * centerOffs.y + normalDir * centerOffs.z;
-
-				v2f o;
-			     o.vertex = UnityObjectToClipPos(float4(localPos, 1));
-
-				
 			    o.color = data.color;
+			    #endif
+            	
+				// // 将基准点转换到世界空间
+    //             float3 worldPivot = mul(unity_ObjectToWorld, float4(_PivotPoint, 1)).xyz;
+    //             
+    //             // 构造旋转矩阵
+    //             float3x3 rotMat = BuildRotationMatrix(normalize(_TargetDirection));
+    //             
+    //             // 计算顶点相对基准点的偏移
+    //             float3 worldOffset = mul(unity_ObjectToWorld, v.vertex).xyz - worldPivot;
+    //             
+    //             // 应用旋转并转换到裁剪空间
+    //             float3 rotatedPos = worldPivot + mul(rotMat, worldOffset);
+    //             o.vertex = mul(UNITY_MATRIX_VP, float4(rotatedPos, 1.0));
+            	o.vertex = UnityObjectToClipPos(v.vertex);
 			    return o;
 			}
 

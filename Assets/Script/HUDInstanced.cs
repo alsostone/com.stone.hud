@@ -24,6 +24,8 @@ namespace YX
 
         private Matrix4x4[] _matrices;
         private MaterialPropertyBlock _block;
+        public GameObject Cube;
+        public GameObject Quad;
         
         public int instanceCount = 500;     // 总实例数量
         public float spawnRadius = 50f;      // 实例生成范围
@@ -32,7 +34,7 @@ namespace YX
         // 实例数据结构体（需与Shader内存布局匹配）
         private struct InstanceData
         {
-            public Matrix4x4 trs;
+            public Vector3 position;
             public Color color;
         }
         
@@ -63,15 +65,21 @@ namespace YX
             Debug.LogFormat("初始化字体耗时:{0}ms", stopwatch.ElapsedMilliseconds);
 
             _instanceMat.SetTexture("_FontTex", _font2Texture.TextureArray);
-
+            _instanceMat.SetVector("_PivotPoint", new Vector3(3.5f * 0.5f, 0.4f, 0));
+            
             BuildMatrixAndBlock();
             
             // 1. 创建_instanceBuffer并填充数据
             InstanceData[] instances = new InstanceData[instanceCount];
             for (int i = 0; i < instanceCount; i++)
             {
-                instances[i].trs = Matrix4x4.TRS(new Vector3(Random.Range(-100f, 100f), 0, Random.Range(-100f, 100f)), Quaternion.identity, Vector3.one);;
+                instances[i].position = new Vector3(Random.Range(-100f, 100f), 0, Random.Range(-100f, 100f));
                 instances[i].color = Random.ColorHSV();
+                var cube = Instantiate(Cube);
+                cube.transform.position = instances[i].position + Vector3.down * 0.5f;
+                
+                var quad = Instantiate(Quad);
+                quad.transform.position = instances[i].position;
             }
             int stride = System.Runtime.InteropServices.Marshal.SizeOf(typeof(InstanceData));
             _instanceBuffer = new ComputeBuffer(instanceCount, stride);
@@ -137,6 +145,7 @@ namespace YX
             // 渲染可见实例
             _instanceMat.SetBuffer("_instanceBuffer", _instanceBuffer);
             _instanceMat.SetBuffer("_visibleBuffer", _visibleBuffer);
+            _instanceMat.SetVector("_TargetDirection", Camera.main.transform.forward);
             Graphics.DrawMeshInstancedIndirect(_instanceMesh, 0, _instanceMat, new Bounds(Vector3.zero, Vector3.one * 100f), _indirectArgsBuffer);
         }
     }

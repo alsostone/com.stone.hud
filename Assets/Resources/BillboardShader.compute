@@ -3,7 +3,7 @@
 
 struct InstanceData
 {
-    matrix trs;
+    float3 position;
     float4 color;
 };
 
@@ -27,7 +27,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     InstanceData instance = _instanceBuffer[id.x];
 
     // 视锥体裁剪
-    float4 posWS = float4(instance.trs._m03_m13_m23, 1.0);
+    float4 posWS = float4(instance.position, 1.0);
     float4 clipPos = mul(_VPMatrix, posWS);
     if(!InFrustum(clipPos))
         return;

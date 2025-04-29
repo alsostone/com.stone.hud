@@ -45,7 +45,7 @@ namespace YX
         private void InitProgress()
         {
             int indexOffset = _vertices.Count;
-            Vector3 pos = Vector3.up * ProgressYOffset;
+            Vector3 pos = Vector3.up * ProgressYOffset + new Vector3(-ProgressWidth * 0.5f, 0, 0);
 
             _vertices.Add(pos + new Vector3(0, -ProgressHeight * 0.5f, 0));
             _vertices.Add(pos + new Vector3(ProgressWidth * 0.5f, -ProgressHeight * 0.5f, 0));
@@ -77,7 +77,7 @@ namespace YX
         private void InitName()
         {
             int indexOffset = _vertices.Count;
-            Vector3 pos = Vector3.up * NameYOffset;
+            Vector3 pos = Vector3.up * NameYOffset + new Vector3(-NameWidth * 0.5f, 0, 0);;
 
             _vertices.Add(pos + new Vector3(0, -NameHeight * 0.5f, 0));
             _vertices.Add(pos + new Vector3(NameWidth * 0.5f, -NameHeight * 0.5f, 0));
