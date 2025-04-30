@@ -45,8 +45,9 @@ Shader "ST/HudIndirectInstancing"
 
 			struct InstanceData
 			{
+				int visible;
 			    float3 position;
-			    float4 color;
+				float progress;
 			};
 			
 			StructuredBuffer<InstanceData> _instanceBuffer;
@@ -74,13 +75,7 @@ Shader "ST/HudIndirectInstancing"
 			    v2f o;
             	UNITY_SETUP_INSTANCE_ID(v);
                 UNITY_TRANSFER_INSTANCE_ID(v, o);
-
-			    #ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
-			    uint id = _visibleBuffer[unity_InstanceID];
-			    InstanceData data = _instanceBuffer[id];
-			    o.color = data.color;
-			    #endif
-
+            	
 			    float3 cameraForward = UNITY_MATRIX_V[2].xyz;
 			    float3 cameraUp = UNITY_MATRIX_V[1].xyz;
             	
@@ -92,6 +87,7 @@ Shader "ST/HudIndirectInstancing"
 
                 float3  BBLocalPos = rightLocal * v.vertex.x + upLocal * v.vertex.y;
                 o.vertex = UnityObjectToClipPos(float4(BBLocalPos, 1.0));
+            	o.color = v.color;
 			    return o;
 			}
 

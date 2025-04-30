@@ -2,8 +2,9 @@
 
 struct InstanceData
 {
+    int visible;
     float3 position;
-    float4 color;
+    float progress;
 };
 
 matrix _VPMatrix;
