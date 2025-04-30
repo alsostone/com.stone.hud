@@ -1,4 +1,6 @@
-	Shader "HUD/Instance"
+// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
+
+Shader "ST/HudIndirectInstancing"
 {
 	Properties
 	{
@@ -53,7 +55,6 @@
 			UNITY_DECLARE_TEX2DARRAY(_FontTex);
 			float4 _FontTex_ST;
 			float4 _Parms[511];
-			float3 _TargetDirection;
 
 			#ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
             void setup()
@@ -68,28 +69,6 @@
             }
             #endif
 			
-            float3x3 RotationMatrix(float3 targetDir)
-			{
-                float3 modelForward = normalize(mul(unity_ObjectToWorld, float4(0,0,1,0)).xyz);
-                float3 rotateAxis = cross(modelForward, targetDir);
-                float rotateAngle = acos(dot(modelForward, targetDir));
-                
-                float3x3 rotationMatrix;
-                float c = cos(rotateAngle);
-                float s = sin(rotateAngle);
-                float t = 1 - c;
-                rotationMatrix[0] = float3(t * rotateAxis.x * rotateAxis.x + c, 
-                                           t * rotateAxis.x * rotateAxis.y - s * rotateAxis.z, 
-                                           t * rotateAxis.x * rotateAxis.z + s * rotateAxis.y);
-                rotationMatrix[1] = float3(t * rotateAxis.x * rotateAxis.y + s * rotateAxis.z, 
-                                           t * rotateAxis.y * rotateAxis.y + c, 
-                                           t * rotateAxis.y * rotateAxis.z - s * rotateAxis.x);
-                rotationMatrix[2] = float3(t * rotateAxis.x * rotateAxis.z - s * rotateAxis.y, 
-                                           t * rotateAxis.y * rotateAxis.z + s * rotateAxis.x, 
-                                           t * rotateAxis.z * rotateAxis.z + c);
-                return rotationMatrix;
-            }
-			
 			v2f vert(appdata v)
 			{
 			    v2f o;
@@ -101,12 +80,18 @@
 			    InstanceData data = _instanceBuffer[id];
 			    o.color = data.color;
 			    #endif
+
+			    float3 cameraForward = UNITY_MATRIX_V[2].xyz;
+			    float3 cameraUp = UNITY_MATRIX_V[1].xyz;
             	
-                float3 worldPivot = mul(unity_ObjectToWorld, float4(0, 0, 0, 1)).xyz;
-                float3x3 rotMat = RotationMatrix(normalize(_TargetDirection));
-                float3 worldOffset = mul(unity_ObjectToWorld, v.vertex).xyz - worldPivot;
-                float3 rotatedPos = worldPivot + mul(rotMat, worldOffset);
-                o.vertex = mul(UNITY_MATRIX_VP, float4(rotatedPos, 1.0));
+			    float3 nomalLocal = normalize(mul(unity_WorldToObject, float4(cameraForward, 1)));
+			    float3 upLocal = normalize(mul(unity_WorldToObject, float4(cameraUp, 1)));
+            	
+                float3 rightLocal = normalize(cross(nomalLocal, upLocal)); //计算新的right轴
+                upLocal = cross(rightLocal, nomalLocal);	//计算新的up轴。
+
+                float3  BBLocalPos = rightLocal * v.vertex.x + upLocal * v.vertex.y;
+                o.vertex = UnityObjectToClipPos(float4(BBLocalPos, 1.0));
 			    return o;
 			}
 

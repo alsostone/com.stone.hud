@@ -1,27 +1,23 @@
+using System.Runtime.InteropServices;
 using UnityEngine;
 using YX;
 
 namespace ST.HUD
 {
-    /// <summary>
-    /// 使用Instanced批量渲染对象
-    /// </summary>
-    public class HUDInstanced : MonoBehaviour
+    public class HudRenderer : MonoBehaviour
     {
         [SerializeField]
         private Material _instanceMat;
         [SerializeField]
         private FontRender2Texture _font2Texture;
         
-        private Mesh _instanceMesh;
-
         private Matrix4x4[] _matrices;
         private MaterialPropertyBlock _block;
         public GameObject Cube;
-        public GameObject Quad;
         
         public int instanceCount = 500;     // 总实例数量
         
+        public Camera frustumCamera;
         public ComputeShader frustumCulling;
         private int _kernel;
         private uint[] _args = new uint[5] { 0, 0, 0, 0, 0 };
@@ -32,16 +28,21 @@ namespace ST.HUD
             public Color color;
         }
         
-        private ComputeBuffer _instanceBuffer;    // 存储所有实例数据
-        private ComputeBuffer _visibleBuffer;     // 存储可见实例索引
-        private ComputeBuffer _indirectArgsBuffer;// 间接绘制参数
+        private Mesh _instanceMesh;
+        private ComputeBuffer _instanceBuffer;      // 存储所有实例数据
+        private ComputeBuffer _visibleBuffer;       // 存储可见实例索引
+        private ComputeBuffer _indirectArgsBuffer;  // 间接绘制参数
+        
+        private static readonly int FontTex = Shader.PropertyToID("_FontTex");
+        private static readonly int VpMatrix = Shader.PropertyToID("_VPMatrix");
+        private static readonly int InstanceBuffer = Shader.PropertyToID("_instanceBuffer");
+        private static readonly int VisibleBuffer = Shader.PropertyToID("_visibleBuffer");
 
         private void Start()
         {
             System.Diagnostics.Stopwatch stopwatch = new System.Diagnostics.Stopwatch();
             stopwatch.Start();
             {
-                _instanceMesh = HudTemplate.GenerateMesh();
                 for (int i = 0; i < 500; ++i)
                 {
                     _font2Texture.Draw("Test:" + i);
@@ -50,7 +51,6 @@ namespace ST.HUD
             stopwatch.Stop();
             Debug.LogFormat("初始化字体耗时:{0}ms", stopwatch.ElapsedMilliseconds);
 
-            _instanceMat.SetTexture("_FontTex", _font2Texture.TextureArray);
             
             BuildMatrixAndBlock();
             
@@ -62,29 +62,27 @@ namespace ST.HUD
                 instances[i].color = Random.ColorHSV();
                 
                 var cube = Instantiate(Cube);
-                cube.transform.position = instances[i].position;
-                
-                var quad = Instantiate(Quad);
-                quad.transform.position = instances[i].position;
+                cube.transform.position = instances[i].position + Vector3.down;
             }
-            int stride = System.Runtime.InteropServices.Marshal.SizeOf(typeof(InstanceData));
-            _instanceBuffer = new ComputeBuffer(instanceCount, stride);
+
+            _instanceBuffer = new ComputeBuffer(instanceCount, Marshal.SizeOf(typeof(InstanceData)));
+            _visibleBuffer = new ComputeBuffer(instanceCount, sizeof(uint), ComputeBufferType.Append);
             _instanceBuffer.SetData(instances);
 
-            // 2. 创建_visibleBuffer（最大可见数量=总实例数）
-            _visibleBuffer = new ComputeBuffer(instanceCount, sizeof(int), ComputeBufferType.Append);
-
-            // 3. 创建间接绘制参数缓冲区
+            _instanceMesh = HudTemplate.GenerateMesh();
             _indirectArgsBuffer = new ComputeBuffer(1, _args.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
-            _args[0] = _instanceMesh.GetIndexCount(0);  // 网格索引数量
-            _args[1] = 0;                       // 可见实例数量（由GPU更新）
+            _args[0] = _instanceMesh.GetIndexCount(0);
             _indirectArgsBuffer.SetData(_args);
             
-            // 绑定ComputeShader参数
             _kernel = frustumCulling.FindKernel("FrustumCulling");
-            frustumCulling.SetBuffer(_kernel, "_instanceBuffer", _instanceBuffer);
-            frustumCulling.SetBuffer(_kernel, "_visibleBuffer", _visibleBuffer);
+            frustumCulling.SetBuffer(_kernel, InstanceBuffer, _instanceBuffer);
+            frustumCulling.SetBuffer(_kernel, VisibleBuffer, _visibleBuffer);
+            
+            _instanceMat.SetTexture(FontTex, _font2Texture.TextureArray);
+            _instanceMat.SetBuffer(InstanceBuffer, _instanceBuffer);
+            _instanceMat.SetBuffer(VisibleBuffer, _visibleBuffer);
         }
+        
         void BuildMatrixAndBlock()
         {
             _block = new MaterialPropertyBlock();
@@ -103,25 +101,20 @@ namespace ST.HUD
             }
             _block.SetVectorArray("_Parms", parms);
         }
-        void Update()
+        
+        void LateUpdate()
         {
             _visibleBuffer.SetCounterValue(0);
             
-            var viewMatrix = Camera.main.worldToCameraMatrix;
-            var projMatrix = GL.GetGPUProjectionMatrix(Camera.main.projectionMatrix, false);
+            var viewMatrix = frustumCamera.worldToCameraMatrix;
+            var projMatrix = GL.GetGPUProjectionMatrix(frustumCamera.projectionMatrix, false);
             var vpMatrix = projMatrix * viewMatrix;
-            frustumCulling.SetMatrix("_VPMatrix", vpMatrix);
+            frustumCulling.SetMatrix(VpMatrix, vpMatrix);
             
             var threadGroups = Mathf.CeilToInt(instanceCount / 64f);
             frustumCulling.Dispatch(_kernel, threadGroups, 1, 1);
-
-            // 将可见实例数量复制到间接参数缓冲区
             ComputeBuffer.CopyCount(_visibleBuffer, _indirectArgsBuffer, sizeof(uint));
-
-            // 渲染可见实例
-            _instanceMat.SetBuffer("_instanceBuffer", _instanceBuffer);
-            _instanceMat.SetBuffer("_visibleBuffer", _visibleBuffer);
-            _instanceMat.SetVector("_TargetDirection", Camera.main.transform.forward);
+            
             Graphics.DrawMeshInstancedIndirect(_instanceMesh, 0, _instanceMat, new Bounds(Vector3.zero, Vector3.one * 100f), _indirectArgsBuffer);
         }
     }

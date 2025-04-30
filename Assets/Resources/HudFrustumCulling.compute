@@ -6,10 +6,9 @@ struct InstanceData
     float4 color;
 };
 
+matrix _VPMatrix;
 StructuredBuffer<InstanceData> _instanceBuffer;
 AppendStructuredBuffer<uint> _visibleBuffer;
-
-matrix _VPMatrix;
 
 bool InFrustum(float4 clipPos)
 {
