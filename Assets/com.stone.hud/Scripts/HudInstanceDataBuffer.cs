@@ -13,7 +13,7 @@ namespace ST.HUD
 
     internal class HudInstanceDataBuffer
     {
-        public int Count => _count;
+        public int Count => _count - _freeIndices.Count;
 
         private readonly Stack<int> _freeIndices;
         private readonly HudInstanceData[] _buffer;

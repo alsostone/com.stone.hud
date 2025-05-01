@@ -57,5 +57,14 @@ public class HudSpawner : MonoBehaviour
         }
         textCount.text = HudRenderer.Instance.GetCount().ToString();
     }
-        
+    
+    public void OnSubButton1000()
+    {
+        var count = HudRenderer.Instance.GetCount();
+        for (var i = 0; i < 1000; i++)
+        {
+            HudRenderer.Instance.RemoveInstance(count - i - 1);
+        }
+        textCount.text = HudRenderer.Instance.GetCount().ToString();
+    }
 }

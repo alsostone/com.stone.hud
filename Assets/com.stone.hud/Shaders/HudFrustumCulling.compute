@@ -22,7 +22,8 @@ bool InFrustum(float4 clipPos)
 void FrustumCulling (uint3 id : SV_DispatchThreadID)
 {
     InstanceData instance = _instanceBuffer[id.x];
-
+    if(instance.visible == 0)
+        return;
     float4 posWS = float4(instance.position, 1.0);
     float4 clipPos = mul(_VPMatrix, posWS);
     if(!InFrustum(clipPos))
