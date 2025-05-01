@@ -47,6 +47,7 @@ Shader "ST/HudIndirectInstancing"
 			{
 				int visible;
 			    float3 position;
+				int nameIndex;
 				float progress;
 			};
 			

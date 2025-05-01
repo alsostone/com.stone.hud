@@ -5,17 +5,10 @@ namespace ST.HUD
 {
     public class HudTemplate : MonoBehaviour
     {
-        private static HudTemplate sMInstance;
-
         [SerializeField] private List<Vector3> vertices = new List<Vector3>();
         [SerializeField] private List<Color> colors = new List<Color>();
         [SerializeField] private List<Vector2> uvs = new List<Vector2>();
         [SerializeField] private List<int> triangles = new List<int>();
-
-        private void Awake()
-        {
-            sMInstance = this;
-        }
 
         private void Reset()
         {
@@ -48,7 +41,6 @@ namespace ST.HUD
             uvs.Add(new Vector2(0f, 1f));
             uvs.Add(new Vector2(1f, 1f));
 
-            //通过顶点颜色的alpha识别是进度条还是文字
             colors.Add(Color.blue);
             colors.Add(Color.blue);
             colors.Add(Color.blue);
@@ -84,7 +76,6 @@ namespace ST.HUD
             uvs.Add(new Vector2(0f, 1f));
             uvs.Add(new Vector2(1f, 1f));
 
-            //通过顶点颜色的alpha识别是进度条还是文字
             colors.Add(Color.red + new Color(0, 0, 0, 0.1f));
             colors.Add(Color.red + new Color(0, 0, 0, 0.1f));
             colors.Add(Color.red + new Color(0, 0, 0, 0.1f));
@@ -99,18 +90,13 @@ namespace ST.HUD
             triangles.Add(indexOffset + 3);
         }
 
-        public static Mesh GenerateMesh()
+        internal Mesh GenerateMesh()
         {
-            if (sMInstance == null)
-            {
-                Debug.LogError("HudTemplate not exist.");
-                return null;
-            }
             Mesh mesh = new Mesh();
-            mesh.vertices = sMInstance.vertices.ToArray();
-            mesh.colors = sMInstance.colors.ToArray();
-            mesh.uv = sMInstance.uvs.ToArray();
-            mesh.SetTriangles(sMInstance.triangles, 0);
+            mesh.vertices = vertices.ToArray();
+            mesh.colors = colors.ToArray();
+            mesh.uv = uvs.ToArray();
+            mesh.SetTriangles(triangles, 0);
             return mesh;
         }
         

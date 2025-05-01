@@ -1,13 +1,8 @@
-﻿
-//=======================================================
-// 作者：hannibal
-// 描述：文字渲染到贴图
-//=======================================================
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.UI;
 
-namespace YX
+namespace ST.HUD
 {
     [RequireComponent(typeof(Text))]
     public class FontRender2Texture : MonoBehaviour
