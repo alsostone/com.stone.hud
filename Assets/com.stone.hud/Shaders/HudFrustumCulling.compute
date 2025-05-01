@@ -4,7 +4,7 @@ struct InstanceData
 {
     int visible;
     float3 position;
-    int nameIndex;
+    int index;
     float progress;
 };
 

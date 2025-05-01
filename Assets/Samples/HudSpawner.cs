@@ -29,7 +29,7 @@ public class HudSpawner : MonoBehaviour
         for (var i = 0; i < 1000; i++)
         {
             var position = new Vector3(Random.Range(-100f, 100f), 0, Random.Range(-100f, 100f));
-            HudRenderer.Instance.AddInstance("玩家名称七个字" + i, position + Vector3.up * 1.5f, Random.Range(0, 1));
+            HudRenderer.Instance.AddInstance("玩家名称七个字" + i, position + Vector3.up * 1.5f, Random.Range(0f, 1f));
             
             var cube = Instantiate(capsule);
             cube.transform.position = position;
@@ -42,7 +42,7 @@ public class HudSpawner : MonoBehaviour
         for (var i = 0; i < 1000; i++)
         {
             var position = new Vector3(Random.Range(-100f, 100f), 0, Random.Range(-100f, 100f));
-            HudRenderer.Instance.AddInstance("玩家名称七个字" + i, position + Vector3.up * 1.5f, Random.Range(0, 1));
+            HudRenderer.Instance.AddInstance("玩家名称七个字" + i, position + Vector3.up * 1.5f, Random.Range(0f, 1f));
         }
         textCount.text = HudRenderer.Instance.GetCount().ToString();
     }
@@ -53,17 +53,19 @@ public class HudSpawner : MonoBehaviour
         {
             // 名字生成个数支持1023个 若超过可以自行把Texture2DArray拓展成多个
             var position = new Vector3(Random.Range(-100f, 100f), 0, Random.Range(-100f, 100f));
-            HudRenderer.Instance.AddInstance("玩家名称七个字" + (i % 1023), position + Vector3.up * 1.5f, Random.Range(0, 1));
+            HudRenderer.Instance.AddInstance("玩家名称七个字" + (i % 1023), position + Vector3.up * 1.5f, Random.Range(0f, 1f));
         }
         textCount.text = HudRenderer.Instance.GetCount().ToString();
     }
     
     public void OnSubButton1000()
     {
+        // 测试直接删除后边1000个
+        // 正式项目中通过HudRenderer.Instance.AddInstance的返回值来删除
         var count = HudRenderer.Instance.GetCount();
-        for (var i = 0; i < 1000; i++)
+        for (var i = count - 1000; i < count; i++)
         {
-            HudRenderer.Instance.RemoveInstance(count - i - 1);
+            HudRenderer.Instance.RemoveInstance(i);
         }
         textCount.text = HudRenderer.Instance.GetCount().ToString();
     }

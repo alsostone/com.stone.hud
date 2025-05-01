@@ -1,5 +1,3 @@
-// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
-
 Shader "ST/HudIndirectInstancing"
 {
 	Properties
@@ -13,6 +11,10 @@ Shader "ST/HudIndirectInstancing"
 		Tags { "RenderType" = "Transparent" }
 		LOD 100
 		Blend SrcAlpha OneMinusSrcAlpha
+		
+		ZWrite Off
+        ZTest Off
+		Cull Off
 
 		Pass
 		{
@@ -38,7 +40,7 @@ Shader "ST/HudIndirectInstancing"
 				float4 vertex : SV_POSITION;
 				float4 color : COLOR;
 				float2 uv : TEXCOORD0;
-				float4 parm : TEXCOORD1;
+				float2 param : TEXCOORD1;
 				UNITY_VERTEX_INPUT_INSTANCE_ID
                 UNITY_VERTEX_OUTPUT_STEREO
 			};
@@ -47,17 +49,17 @@ Shader "ST/HudIndirectInstancing"
 			{
 				int visible;
 			    float3 position;
-				int nameIndex;
+				int index;
 				float progress;
 			};
 			
 			StructuredBuffer<InstanceData> _instanceBuffer;
 			StructuredBuffer<uint> _visibleBuffer;
-
+			
 			UNITY_DECLARE_TEX2DARRAY(_FontTex);
 			float4 _FontTex_ST;
-			float4 _Parms[511];
-
+			fixed4 _Color;
+			
 			#ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
             void setup()
             {
@@ -71,42 +73,43 @@ Shader "ST/HudIndirectInstancing"
             }
             #endif
 			
-			v2f vert(appdata v)
+			v2f vert(appdata v, uint instanceID: SV_InstanceID)
 			{
 			    v2f o;
             	UNITY_SETUP_INSTANCE_ID(v);
                 UNITY_TRANSFER_INSTANCE_ID(v, o);
+
+            	uint id = _visibleBuffer[instanceID];
+				InstanceData data = _instanceBuffer[id];
             	
 			    float3 cameraForward = UNITY_MATRIX_V[2].xyz;
 			    float3 cameraUp = UNITY_MATRIX_V[1].xyz;
             	
-			    float3 nomalLocal = normalize(mul(unity_WorldToObject, float4(cameraForward, 1)));
+			    float3 normalLocal = normalize(mul(unity_WorldToObject, float4(cameraForward, 1)));
 			    float3 upLocal = normalize(mul(unity_WorldToObject, float4(cameraUp, 1)));
             	
-                float3 rightLocal = normalize(cross(nomalLocal, upLocal)); //计算新的right轴
-                upLocal = cross(rightLocal, nomalLocal);	//计算新的up轴。
+                float3 rightLocal = normalize(cross(normalLocal, upLocal));
+                upLocal = cross(rightLocal, normalLocal);
 
-                float3  BBLocalPos = rightLocal * v.vertex.x + upLocal * v.vertex.y;
-                o.vertex = UnityObjectToClipPos(float4(BBLocalPos, 1.0));
+                float3 pos = rightLocal * v.vertex.x + upLocal * v.vertex.y + normalLocal * v.vertex.z;
+                o.vertex = UnityObjectToClipPos(float4(pos, 1.0));
+            	o.uv = TRANSFORM_TEX(v.uv, _FontTex);
             	o.color = v.color;
+            	o.param = float2(data.index, data.progress);
 			    return o;
 			}
 
 			fixed4 frag(v2f i) : SV_Target
 			{
-				fixed4 color = i.color;
-
-				// if (i.color.a > 1.0)
-				// {
-				// 	clip(i.parm.x - i.uv.x);//通过uv计算进度，uv从0-1
-				// 	color = i.color;
-				// }
-				// else
-				// {
-				// 	float3 uv = float3(i.uv.xy, i.parm.y);
-				// 	color = UNITY_SAMPLE_TEX2DARRAY(_FontTex, uv);
-				// }
-				return color;
+				float factor = step(i.color.a, 1.0);
+				
+				float3 uv = float3(i.uv.xy, i.param.x);
+				fixed4 color1 = UNITY_SAMPLE_TEX2DARRAY(_FontTex, uv);
+				
+				float t = step(i.param.y, i.uv.x);
+				fixed4 color2 = lerp(i.color, _Color, t);
+				
+				return lerp(color2, color1, factor);;
 			}
 			ENDCG
 		}
