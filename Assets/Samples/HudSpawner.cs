@@ -17,7 +17,7 @@ public class HudSpawner : MonoBehaviour
         {
             for (int i = 0; i < 1000; ++i)
             {
-                HudRenderer.Instance.PersistentTextDraw("玩家名称七个字" + i);
+                HudRenderer.Instance.PersistentTextDraw("player name " + i);
             }
         }
         stopwatch.Stop();
@@ -38,7 +38,7 @@ public class HudSpawner : MonoBehaviour
         for (var i = 0; i < 1000; i++)
         {
             var position = new Vector3(Random.Range(-100f, 100f), 0, Random.Range(-100f, 100f));
-            HudRenderer.Instance.AddInstance("玩家名称七个字" + i, position + Vector3.up * 1.5f, Random.Range(0f, 1f));
+            HudRenderer.Instance.AddInstance("player name " + i, position + Vector3.up * 1.5f, Random.Range(0f, 1f));
             
             var cube = Instantiate(capsule);
             cube.transform.position = position;
@@ -51,7 +51,7 @@ public class HudSpawner : MonoBehaviour
         for (var i = 0; i < 1000; i++)
         {
             var position = new Vector3(Random.Range(-100f, 100f), 0, Random.Range(-100f, 100f));
-            HudRenderer.Instance.AddInstance("玩家名称七个字" + i, position + Vector3.up * 1.5f, Random.Range(0f, 1f));
+            HudRenderer.Instance.AddInstance("player name " + i, position + Vector3.up * 1.5f, Random.Range(0f, 1f));
         }
         textCount.text = HudRenderer.Instance.GetCount().ToString();
     }
@@ -62,7 +62,7 @@ public class HudSpawner : MonoBehaviour
         {
             // 名字生成个数默认支持1024个 若超过可以修改HudConst.cs中的maxTextureCount
             var position = new Vector3(Random.Range(-100f, 100f), 0, Random.Range(-100f, 100f));
-            HudRenderer.Instance.AddInstance("玩家名称七个字" + (i % 1024), position + Vector3.up * 1.5f, Random.Range(0f, 1f));
+            HudRenderer.Instance.AddInstance("player name " + (i % 1024), position + Vector3.up * 1.5f, Random.Range(0f, 1f));
         }
         textCount.text = HudRenderer.Instance.GetCount().ToString();
     }

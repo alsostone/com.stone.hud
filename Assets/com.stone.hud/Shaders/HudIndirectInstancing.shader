@@ -10,14 +10,13 @@ Shader "ST/HudIndirectInstancing"
 	{
 		Tags { "RenderType" = "Transparent" }
 		LOD 100
-		Blend SrcAlpha OneMinusSrcAlpha
-		
-		ZWrite Off
-        ZTest Off
-		Cull Off
 
 		Pass
 		{
+			// 批量渲染半透物体会闪烁，比如：字体的平滑边缘是半透的，会引起闪烁
+			// 不使用混合 有2种适配方案 1.给字体图加一个不透明的背景 2.使用clip裁剪后字体有锯齿状描边，再启用抗锯齿弱化
+			// Blend SrcAlpha OneMinusSrcAlpha
+
 			CGPROGRAM
 			#pragma vertex vert
 			#pragma fragment frag
@@ -60,9 +59,9 @@ Shader "ST/HudIndirectInstancing"
 			float4 _FontTex_ST;
 			fixed4 _Color;
 			
-			#ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
             void setup()
             {
+				#ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
             	uint id = _visibleBuffer[unity_InstanceID];
 			    float3 pos = _instanceBuffer[id].position;
             	float4x4 mat = unity_ObjectToWorld;
@@ -70,8 +69,8 @@ Shader "ST/HudIndirectInstancing"
 				mat[1][3] = pos.y;
 				mat[2][3] = pos.z;
 				unity_ObjectToWorld = mat;
+				#endif
             }
-            #endif
 			
 			v2f vert(appdata v, uint instanceID: SV_InstanceID)
 			{
@@ -110,7 +109,9 @@ Shader "ST/HudIndirectInstancing"
 				float t = step(i.param.y, i.uv.x);
 				fixed4 color2 = lerp(i.color, _Color, t);
 				
-				return lerp(color2, color1, factor);;
+				fixed4 col = lerp(color2, color1, factor);
+                clip(col.a - 0.01);
+				return col;
 			}
 			ENDCG
 		}

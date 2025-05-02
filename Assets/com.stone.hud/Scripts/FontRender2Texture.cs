@@ -8,11 +8,7 @@ namespace ST.HUD
     [RequireComponent(typeof(Text))]
     public class FontRender2Texture : MonoBehaviour
     {
-        [SerializeField]
-        private Camera _uiCamera;
-        
-        [SerializeField]
-        private int _textureDepth = 100;
+        public Camera uiCamera;
         public Texture2DArray TextureArray { get; private set; }
 
         private Text _text;
@@ -34,15 +30,15 @@ namespace ST.HUD
             _textureSize = new Vector2Int((int)size.x, (int)size.y);
 
             _text = GetComponent<Text>();
-            TextureArray = new Texture2DArray(_textureSize.x, _textureSize.y, _textureDepth, GraphicsFormat.R8G8B8A8_UNorm, TextureCreationFlags.None);
+            TextureArray = new Texture2DArray(_textureSize.x, _textureSize.y, HudConst.MaxTextureCount, GraphicsFormat.R8G8B8A8_UNorm, TextureCreationFlags.None);
             TextureArray.name = "FontTextureArray";
 
             _renderTexture = new RenderTexture(_textureSize.x, _textureSize.y, 0, GraphicsFormat.R8G8B8A8_UNorm);
             _renderTexture.name = "FontRenderTexture";
             _renderTexture.useMipMap = false;
 
-            _uiCamera.enabled = false;
-            _uiCamera.targetTexture = _renderTexture;
+            uiCamera.enabled = false;
+            uiCamera.targetTexture = _renderTexture;
         }
 
         public int Draw(string txt)
@@ -61,11 +57,11 @@ namespace ST.HUD
                 }
                 
                 _text.text = txt;
-                _uiCamera.enabled = true;
+                uiCamera.enabled = true;
                 RenderTexture.active = _renderTexture;
-                _uiCamera.Render();
+                uiCamera.Render();
                 RenderTexture.active = null;
-                _uiCamera.enabled = false;
+                uiCamera.enabled = false;
                 Graphics.CopyTexture(_renderTexture, 0, 0, 0, 0, _textureSize.x, _textureSize.y, TextureArray, index, 0, 0, 0);
                 _nameIndexMapping.Add(txt, index);
             }
