@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.UI;
 
@@ -9,27 +10,34 @@ namespace ST.HUD
     {
         [SerializeField]
         private Camera _uiCamera;
-        [SerializeField]
-        private int _cellWidth = 100;
-        [SerializeField]
-        private int _cellHeight = 50;
-
-        private int _slice = 0;
+        
         [SerializeField]
         private int _textureDepth = 100;
         public Texture2DArray TextureArray { get; private set; }
 
         private Text _text;
         private RenderTexture _renderTexture;
+        private Vector2Int _textureSize;
+        
+        private int _count = 0;
+        private Dictionary<string, int> _nameIndexMapping;
+        private Dictionary<int, int> _indexRefMapping;
+        private Stack<int> _freeIndices;
 
         private void Awake()
         {
+            _nameIndexMapping = new Dictionary<string, int>(HudConst.MaxTextureCount);
+            _indexRefMapping = new Dictionary<int, int>(HudConst.MaxTextureCount);
+            _freeIndices = new Stack<int>(HudConst.MaxTextureCount);
+            
+            var size = ((RectTransform)transform).rect.size;
+            _textureSize = new Vector2Int((int)size.x, (int)size.y);
+
             _text = GetComponent<Text>();
+            TextureArray = new Texture2DArray(_textureSize.x, _textureSize.y, _textureDepth, GraphicsFormat.R8G8B8A8_UNorm, TextureCreationFlags.None);
+            TextureArray.name = "FontTextureArray";
 
-            TextureArray = new Texture2DArray(_cellWidth, _cellHeight, _textureDepth, GraphicsFormat.R8G8B8A8_UNorm, TextureCreationFlags.None);
-            TextureArray.name  = "FontTextureArray";
-
-            _renderTexture = new RenderTexture(_cellWidth, _cellHeight, 0, GraphicsFormat.R8G8B8A8_UNorm);
+            _renderTexture = new RenderTexture(_textureSize.x, _textureSize.y, 0, GraphicsFormat.R8G8B8A8_UNorm);
             _renderTexture.name = "FontRenderTexture";
             _renderTexture.useMipMap = false;
 
@@ -39,24 +47,54 @@ namespace ST.HUD
 
         public int Draw(string txt)
         {
-            _text.text = txt;
-            
-            _uiCamera.enabled = true;
+            if (!_nameIndexMapping.TryGetValue(txt, out var index))
             {
+                if (!_freeIndices.TryPop(out index))
+                {
+                    if (_count >= HudConst.MaxTextureCount)
+                    {
+                        Debug.LogError("FontRender2Texture max texture count reached");
+                        return 0;
+                    }
+                    index = _count;
+                    _count++;
+                }
+                
+                _text.text = txt;
+                _uiCamera.enabled = true;
                 RenderTexture.active = _renderTexture;
                 _uiCamera.Render();
                 RenderTexture.active = null;
+                _uiCamera.enabled = false;
+                Graphics.CopyTexture(_renderTexture, 0, 0, 0, 0, _textureSize.x, _textureSize.y, TextureArray, index, 0, 0, 0);
+                _nameIndexMapping.Add(txt, index);
             }
-            _uiCamera.enabled = false;
-
-            Graphics.CopyTexture(_renderTexture, 0, 0, 0, 0, _cellWidth, _cellHeight, TextureArray, _slice, 0, 0, 0);
-            _slice++;
-            return _slice - 1;
+            
+            if (_indexRefMapping.TryGetValue(index, out var refCount))
+            {
+                _indexRefMapping[index] = refCount + 1;
+            } else {
+                _indexRefMapping.Add(index, 1);
+            }
+            return index;
         }
 
-        public void Reset()
+        public void Remove(int index)
         {
-            _slice = 0;
+            if (_indexRefMapping.TryGetValue(index, out var refCount))
+            {
+                --refCount;
+                if (refCount == 0)
+                {
+                    _freeIndices.Push(index);
+                    _indexRefMapping.Remove(index);
+                }
+                else
+                {
+                    _indexRefMapping[index] = refCount;
+                }
+            }
         }
+        
     }
 }

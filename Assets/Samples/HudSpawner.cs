@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using Random = UnityEngine.Random;
 using ST.HUD;
@@ -16,14 +17,22 @@ public class HudSpawner : MonoBehaviour
         {
             for (int i = 0; i < 1000; ++i)
             {
-                HudRenderer.Instance.TextDraw("玩家名称七个字" + i);
+                HudRenderer.Instance.PersistentTextDraw("玩家名称七个字" + i);
             }
         }
         stopwatch.Stop();
         Debug.LogFormat("生成1000个玩家名字耗时:{0}ms", stopwatch.ElapsedMilliseconds);
         CreatePlayer();
     }
-    
+
+    private void OnDestroy()
+    {
+        for (int i = 0; i < 1000; ++i)
+        {
+            HudRenderer.Instance.RemoveDraw(i);
+        }
+    }
+
     void CreatePlayer()
     {
         for (var i = 0; i < 1000; i++)
@@ -51,9 +60,9 @@ public class HudSpawner : MonoBehaviour
     {
         for (var i = 0; i < 10000; i++)
         {
-            // 名字生成个数支持1023个 若超过可以自行把Texture2DArray拓展成多个
+            // 名字生成个数默认支持1024个 若超过可以修改HudConst.cs中的maxTextureCount
             var position = new Vector3(Random.Range(-100f, 100f), 0, Random.Range(-100f, 100f));
-            HudRenderer.Instance.AddInstance("玩家名称七个字" + (i % 1023), position + Vector3.up * 1.5f, Random.Range(0f, 1f));
+            HudRenderer.Instance.AddInstance("玩家名称七个字" + (i % 1024), position + Vector3.up * 1.5f, Random.Range(0f, 1f));
         }
         textCount.text = HudRenderer.Instance.GetCount().ToString();
     }

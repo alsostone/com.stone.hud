@@ -93,6 +93,7 @@ Shader "ST/HudIndirectInstancing"
 
                 float3 pos = rightLocal * v.vertex.x + upLocal * v.vertex.y + normalLocal * v.vertex.z;
                 o.vertex = UnityObjectToClipPos(float4(pos, 1.0));
+            	
             	o.uv = TRANSFORM_TEX(v.uv, _FontTex);
             	o.color = v.color;
             	o.param = float2(data.index, data.progress);
@@ -101,7 +102,7 @@ Shader "ST/HudIndirectInstancing"
 
 			fixed4 frag(v2f i) : SV_Target
 			{
-				float factor = step(i.color.a, 1.0);
+				float factor = step(i.color.a, 1);
 				
 				float3 uv = float3(i.uv.xy, i.param.x);
 				fixed4 color1 = UNITY_SAMPLE_TEX2DARRAY(_FontTex, uv);

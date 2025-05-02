@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using UnityEngine;
 
@@ -19,7 +18,6 @@ namespace ST.HUD
             }
         }
         
-        public int maxRenderCount = 102400;
         public Material instanceMat;
         public FontRender2Texture font2Texture;
         public ComputeShader frustumCulling;
@@ -34,7 +32,6 @@ namespace ST.HUD
         private ComputeBuffer _instanceBuffer;              // 存储所有实例数据
         private ComputeBuffer _visibleBuffer;               // 存储可见实例索引
         private ComputeBuffer _indirectArgsBuffer;          // 间接绘制参数
-        private Dictionary<string, int> _nameIndexMapping;
 
         private static readonly int FontTex = Shader.PropertyToID("_FontTex");
         private static readonly int VpMatrix = Shader.PropertyToID("_VPMatrix");
@@ -57,23 +54,23 @@ namespace ST.HUD
             return _instanceDataBuffer.Count;
         }
         
-        public int TextDraw(string text)
+        public int PersistentTextDraw(string text)
         {
-            if (!_nameIndexMapping.TryGetValue(text, out var index))
-            {
-                index = font2Texture.Draw(text);
-                _nameIndexMapping.Add(text, index);
-            }
-            return index;
+            return font2Texture.Draw(text);;
+        }
+        public void RemoveDraw(int index)
+        {
+            font2Texture.Remove(index);
         }
         
         public int AddInstance(string text, Vector3 position, float progress = 1f)
         {
+            var index = font2Texture.Draw(text);
             var instanceData = new HudInstanceData
             {
                 Visible = 1,
                 Position = position,
-                NameIndex = TextDraw(text),
+                NameIndex = index,
                 Progress = progress
             };
             return _instanceDataBuffer.Insert(instanceData);
@@ -81,15 +78,16 @@ namespace ST.HUD
         
         public void RemoveInstance(int index)
         {
+            var data = _instanceDataBuffer[index];
+            font2Texture.Remove(data.NameIndex);
             _instanceDataBuffer.Remove(index);
         }
 
         private void Start()
         {
-            _nameIndexMapping = new Dictionary<string, int>(maxRenderCount / 10);
-            _instanceDataBuffer = new HudInstanceDataBuffer(maxRenderCount);
-            _instanceBuffer = new ComputeBuffer(maxRenderCount, Marshal.SizeOf(typeof(HudInstanceData)));
-            _visibleBuffer = new ComputeBuffer(maxRenderCount, sizeof(uint), ComputeBufferType.Append);
+            _instanceDataBuffer = new HudInstanceDataBuffer(HudConst.MaxRenderCount);
+            _instanceBuffer = new ComputeBuffer(HudConst.MaxRenderCount, Marshal.SizeOf(typeof(HudInstanceData)));
+            _visibleBuffer = new ComputeBuffer(HudConst.MaxRenderCount, sizeof(uint), ComputeBufferType.Append);
 
             _instanceMesh = hudTemplate.GenerateMesh();
             _indirectArgsBuffer = new ComputeBuffer(1, _args.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
@@ -115,7 +113,7 @@ namespace ST.HUD
             var vpMatrix = projMatrix * viewMatrix;
             frustumCulling.SetMatrix(VpMatrix, vpMatrix);
             
-            var threadGroups = Mathf.CeilToInt(maxRenderCount / 64f);
+            var threadGroups = Mathf.CeilToInt(HudConst.MaxRenderCount / 64f);
             frustumCulling.Dispatch(_kernel, threadGroups, 1, 1);
             ComputeBuffer.CopyCount(_visibleBuffer, _indirectArgsBuffer, sizeof(uint));
             
