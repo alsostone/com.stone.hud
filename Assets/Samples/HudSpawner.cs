@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 using Random = UnityEngine.Random;
 using ST.HUD;
@@ -23,14 +22,6 @@ public class HudSpawner : MonoBehaviour
         stopwatch.Stop();
         Debug.LogFormat("生成1000个玩家名字耗时:{0}ms", stopwatch.ElapsedMilliseconds);
         CreatePlayer();
-    }
-
-    private void OnDestroy()
-    {
-        for (int i = 0; i < 1000; ++i)
-        {
-            HudRenderer.Instance.RemoveDraw(i);
-        }
     }
 
     void CreatePlayer()
