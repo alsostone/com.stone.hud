@@ -49,9 +49,14 @@ namespace ST.HUD
             _frustumCamera = frustumCamera;
         }
         
-        public int GetCount()
+        public int GetInstanceCount()
         {
-            return _instanceDataBuffer.Count;
+            return _instanceDataBuffer.DrawingCount;
+        }
+        
+        public int GetFontTextureCount()
+        {
+            return font2Texture.DrawingCount;
         }
         
         public int PersistentTextDraw(string text)
@@ -62,7 +67,22 @@ namespace ST.HUD
         {
             font2Texture.Remove(index);
         }
-        
+
+        public void SetInstanceProgress(int index, float progress)
+        {
+            if (index < 0 || index >= _instanceDataBuffer.Capacity) return;
+            var data = _instanceDataBuffer[index];
+            data.Progress = progress;
+            _instanceDataBuffer.SetData(index, data);
+        }
+        public void SetInstancePosition(int index, Vector3 position)
+        {
+            if (index < 0 || index >= _instanceDataBuffer.Capacity) return;
+            var data = _instanceDataBuffer[index];
+            data.Position = position;
+            _instanceDataBuffer.SetData(index, data);
+        }
+
         public int AddInstance(string text, Vector3 position, float progress = 1f)
         {
             var index = font2Texture.Draw(text);

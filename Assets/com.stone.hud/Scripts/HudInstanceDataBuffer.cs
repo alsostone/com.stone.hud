@@ -13,21 +13,21 @@ namespace ST.HUD
 
     internal class HudInstanceDataBuffer
     {
-        public int Count => _count - _freeIndices.Count;
-        public HudInstanceData this[int index] => _buffer[index];
-
+        internal int DrawingCount => _count - _freeIndices.Count;
+        internal HudInstanceData this[int index] => _buffer[index];
+        internal int Capacity { get;  private set; }
+        
         private readonly Stack<int> _freeIndices;
         private readonly HudInstanceData[] _buffer;
         private int _count;
-        private readonly int _capacity;
         private bool _dirty;
 
         internal HudInstanceDataBuffer(int capacity)
         {
-            _capacity = capacity;
+            this.Capacity = capacity;
             _freeIndices = new Stack<int>(capacity / 10);   // 10%的空间用来存储空闲索引
             _buffer = new HudInstanceData[capacity];
-            _count = 0;
+            this._count = 0;
             _dirty = false;
         }
         
@@ -39,10 +39,10 @@ namespace ST.HUD
                 _dirty = true;
                 return index;
             }
-            if (_capacity > _count)
+            if (this.Capacity > this._count)
             {
-                index = _count;
-                _count++;
+                index = this._count;
+                this._count++;
                 _buffer[index] = item;
                 _dirty = true;
                 return index;
@@ -52,9 +52,16 @@ namespace ST.HUD
         
         internal void Remove(int index)
         {
-            if (index < 0 || index >= _capacity) return;
+            if (index < 0 || index >= this.Capacity) return;
             _buffer[index].Visible = 0;
             _freeIndices.Push(index);
+            _dirty = true;
+        }
+        
+        internal void SetData(int index, HudInstanceData data)
+        {
+            if (index < 0 || index >= this.Capacity) return;
+            _buffer[index] = data;
             _dirty = true;
         }
         
@@ -62,7 +69,7 @@ namespace ST.HUD
         {
             if (_dirty)
             {
-                buffer.SetData(_buffer, 0, 0, _count);
+                buffer.SetData(_buffer, 0, 0, this._count);
                 _dirty = false;
             }
         }

@@ -34,7 +34,7 @@ public class HudSpawner : MonoBehaviour
             var cube = Instantiate(capsule);
             cube.transform.position = position;
         }
-        textCount.text = HudRenderer.Instance.GetCount().ToString();
+        textCount.text = HudRenderer.Instance.GetInstanceCount().ToString();
     }
 
     public void OnAddButton1000()
@@ -44,7 +44,7 @@ public class HudSpawner : MonoBehaviour
             var position = new Vector3(Random.Range(-100f, 100f), 0, Random.Range(-100f, 100f));
             HudRenderer.Instance.AddInstance("player name " + i, position + Vector3.up * 1.5f, Random.Range(0f, 1f));
         }
-        textCount.text = HudRenderer.Instance.GetCount().ToString();
+        textCount.text = HudRenderer.Instance.GetInstanceCount().ToString();
     }
     
     public void OnAddButton10000()
@@ -55,18 +55,18 @@ public class HudSpawner : MonoBehaviour
             var position = new Vector3(Random.Range(-100f, 100f), 0, Random.Range(-100f, 100f));
             HudRenderer.Instance.AddInstance("player name " + (i % 1024), position + Vector3.up * 1.5f, Random.Range(0f, 1f));
         }
-        textCount.text = HudRenderer.Instance.GetCount().ToString();
+        textCount.text = HudRenderer.Instance.GetInstanceCount().ToString();
     }
     
     public void OnSubButton1000()
     {
         // 测试直接删除后边1000个
         // 正式项目中通过HudRenderer.Instance.AddInstance的返回值来删除
-        var count = HudRenderer.Instance.GetCount();
+        var count = HudRenderer.Instance.GetInstanceCount();
         for (var i = count - 1000; i < count; i++)
         {
             HudRenderer.Instance.RemoveInstance(i);
         }
-        textCount.text = HudRenderer.Instance.GetCount().ToString();
+        textCount.text = HudRenderer.Instance.GetInstanceCount().ToString();
     }
 }

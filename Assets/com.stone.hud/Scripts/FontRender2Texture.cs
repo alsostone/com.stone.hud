@@ -8,6 +8,8 @@ namespace ST.HUD
     [RequireComponent(typeof(Text))]
     public class FontRender2Texture : MonoBehaviour
     {
+        internal int DrawingCount => _count - _freeIndices.Count;
+        
         public Camera uiCamera;
         public Texture2DArray TextureArray { get; private set; }
 
@@ -41,7 +43,7 @@ namespace ST.HUD
             uiCamera.targetTexture = _renderTexture;
         }
 
-        public int Draw(string txt)
+        internal int Draw(string txt)
         {
             if (!_nameIndexMapping.TryGetValue(txt, out var index))
             {
@@ -75,7 +77,7 @@ namespace ST.HUD
             return index;
         }
 
-        public void Remove(int index)
+        internal void Remove(int index)
         {
             if (_indexRefMapping.TryGetValue(index, out var refCount))
             {
