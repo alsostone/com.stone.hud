@@ -9,8 +9,10 @@
 
 # 如何使用
 1. 把Template/HUDRoot拖入场景中
-2. 添加HUD调用HudRenderer.Instance.AddInstance方法
-3. 移除HUD调用HudRenderer.Instance.RemoveInstance方法
+2. 添加HUD：HudRenderer.Instance.AddInstance`返回实例ID，进度取值0~1`
+3. 移除HUD：HudRenderer.Instance.RemoveInstance
+4. 更新进度：HudRenderer.Instance.SetInstanceProgress`进度取值0~1`
+5. 更新位置：HudRenderer.Instance.SetInstancePosition`Update跟随`
 
 # 性能测试
 - 1000个和10000个HUD实例，性能上没有差别。
